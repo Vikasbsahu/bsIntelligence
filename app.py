@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 import sys
 import os
+import os
+import streamlit as st
+
+st.write("Files in root:", os.listdir())
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from data.fetch_data import load_market_data
