@@ -3,41 +3,37 @@ import yfinance as yf
 import streamlit as st
 
 # -----------------------------------
-# FETCH DATA (STABLE VERSION)
+# FETCH DATA (PRIMARY)
 # -----------------------------------
 def fetch_market_data():
     try:
-        # Use ETF proxy instead of ^NSEI
-        nifty = yf.download("NIFTYBEES.NS", period="1y", progress=False)
-        vix = yf.download("^INDIAVIX", period="1y", progress=False)
+        nifty = yf.download("^NSEI", period="6mo", interval="1d", progress=False)
+        vix = yf.download("^INDIAVIX", period="6mo", interval="1d", progress=False)
 
         if nifty.empty:
-            return None
+            return None, "❌ No Data"
 
         df = pd.DataFrame()
+        df["Nifty"] = nifty["Close"]
 
-        # Convert ETF to index-like scale
-        df["Nifty"] = nifty["Close"] * 100   # approx conversion
-
-        # VIX fallback
         if not vix.empty:
             df["VIX"] = vix["Close"]
         else:
             df["VIX"] = 15
 
-        df["52W_High"] = df["Nifty"].rolling(252).max()
+        df["52W_High"] = df["Nifty"].rolling(126).max()
 
-        return df.dropna()
+        return df.dropna(), "🟢 Yahoo (Stable)"
 
     except Exception as e:
-        print("Data fetch failed:", e)
-        return None
+        print(e)
+        return None, "❌ Error"
 
 
 # -----------------------------------
-# FALLBACK (NEVER BREAK APP)
+# SAFE FALLBACK
 # -----------------------------------
-def generate_sample_data():
+def fallback_data():
     dates = pd.date_range(end=pd.Timestamp.today(), periods=200)
 
     df = pd.DataFrame(index=dates)
@@ -45,7 +41,7 @@ def generate_sample_data():
     df["VIX"] = [15] * 200
     df["52W_High"] = df["Nifty"].rolling(50).max()
 
-    return df
+    return df, "🔴 Fallback (Not Real)"
 
 
 # -----------------------------------
@@ -54,9 +50,9 @@ def generate_sample_data():
 @st.cache_data(ttl=600)
 def load_market_data():
 
-    df = fetch_market_data()
+    df, source = fetch_market_data()
 
     if df is not None and not df.empty:
-        return df
+        return df, source
 
-    return generate_sample_data()
+    return fallback_data()
