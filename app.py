@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
+import sys
+import os
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from data.fetch_data import load_market_data
 from data.indicators import calculate_rsi, calculate_dma
 from engine.signals import *
