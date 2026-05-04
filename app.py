@@ -15,7 +15,7 @@ st.set_page_config(page_title="Personal Investing Dashboard", layout="wide")
 # -----------------------------------
 # LOAD DATA
 # -----------------------------------
-df = load_market_data()
+df, data_source = load_market_data()
 
 if df.empty:
     st.error("❌ No market data available")
