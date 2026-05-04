@@ -6,8 +6,10 @@ import os
 import streamlit as st
 
 st.write("Files in root:", os.listdir())
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
 from data.fetch_data import load_market_data
 from data.indicators import calculate_rsi, calculate_dma
 from engine.signals import *
