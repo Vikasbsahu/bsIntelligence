@@ -1,34 +1,36 @@
 import streamlit as st
 import pandas as pd
-import sys
-import os
-import os
-import streamlit as st
 
-st.write("Files in root:", os.listdir())
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
 from data.fetch_data import load_market_data
-from data.indicators import calculate_rsi, calculate_dma
+from data.indicators import calculate_dma, calculate_rsi
 from engine.signals import *
 from engine.scoring import calculate_score
-from engine.deployment import get_deployment
 from config.defaults import DEFAULT_WEIGHTS
+from utils.helpers import format_change
+
+st.set_page_config(page_title="Investing Dashboard", layout="wide")
 
 # -----------------------------------
 # LOAD DATA
 # -----------------------------------
 df = load_market_data()
+
+if df.empty:
+    st.error("❌ No data available")
+    st.stop()
+
 df = calculate_dma(df)
 df["RSI"] = calculate_rsi(df["Nifty"])
 
 latest = df.iloc[-1]
+prev = df.iloc[-2] if len(df) > 1 else latest
 
 # -----------------------------------
-# DERIVED VALUES
+# METRICS
 # -----------------------------------
+nifty_change = ((latest["Nifty"] - prev["Nifty"]) / prev["Nifty"]) * 100
+vix_change = ((latest["VIX"] - prev["VIX"]) / prev["VIX"]) * 100
+
 drawdown = ((latest["Nifty"] - latest["52W_High"]) / latest["52W_High"]) * 100
 dma_gap = ((latest["Nifty"] - latest["50DMA"]) / latest["50DMA"]) * 100
 valuation_gap = ((latest["Nifty"] - latest["200DMA"]) / latest["200DMA"]) * 100
@@ -40,33 +42,34 @@ signals = {
     "vix": vix_signal(latest["VIX"]),
     "drawdown": drawdown_signal(drawdown),
     "dma": dma_signal(dma_gap),
-    "valuation": valuation_signal(valuation_gap),
+    "valuation": valuation_signal(valuation_gap)
 }
 
-# -----------------------------------
-# WEIGHTS (DYNAMIC)
-# -----------------------------------
-weights = {
-    "vix": st.session_state.get("vix_weight", DEFAULT_WEIGHTS["vix"]),
-    "drawdown": st.session_state.get("drawdown_weight", DEFAULT_WEIGHTS["drawdown"]),
-    "dma": st.session_state.get("dma_weight", DEFAULT_WEIGHTS["dma"]),
-    "valuation": st.session_state.get("valuation_weight", DEFAULT_WEIGHTS["valuation"]),
-}
+weights = DEFAULT_WEIGHTS
 
-# -----------------------------------
-# SCORE
-# -----------------------------------
 buy_score = calculate_score(signals, weights)
-
-# -----------------------------------
-# DEPLOYMENT
-# -----------------------------------
-deploy_pct = get_deployment(buy_score)
 
 # -----------------------------------
 # UI
 # -----------------------------------
 st.title("📊 Personal Investing Dashboard")
 
-st.metric("Buy Score", f"{buy_score}%")
-st.metric("Deploy %", f"{deploy_pct}%")
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric("Nifty", round(latest["Nifty"], 2), format_change(nifty_change))
+
+with col2:
+    st.metric("India VIX", round(latest["VIX"], 2), format_change(vix_change))
+
+with col3:
+    st.metric("Buy Score", f"{buy_score}%")
+
+# -----------------------------------
+# CHARTS
+# -----------------------------------
+st.subheader("📈 Nifty Trend")
+st.line_chart(df["Nifty"])
+
+st.subheader("📉 VIX Trend")
+st.line_chart(df["VIX"])
