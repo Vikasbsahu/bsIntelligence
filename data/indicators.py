@@ -1,5 +1,10 @@
 import pandas as pd
 
+def calculate_dma(df):
+    df["50DMA"] = df["Nifty"].rolling(50).mean()
+    df["200DMA"] = df["Nifty"].rolling(200).mean()
+    return df
+
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -10,14 +15,3 @@ def calculate_rsi(series, period=14):
 
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
-
-
-def calculate_dma(df):
-    df["50DMA"] = df["Nifty"].rolling(50).mean()
-    df["200DMA"] = df["Nifty"].rolling(200).mean()
-    return df
-
-
-def calculate_breadth_proxy(df):
-    recent = df.tail(20)
-    return ((recent["Nifty"] > recent["50DMA"]).sum() / 20) * 100
